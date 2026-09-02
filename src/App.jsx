@@ -3,6 +3,7 @@ import Hero from './components/Hero/Hero';
 import Services from './components/Services/Services';
 import Process from './components/Process/Process';
 import Benefits from './components/Benefits/Benefits';
+import Contact from './components/Contact/Contact';
 
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Services />
         <Process />
         <Benefits />
+        <Contact />
       </main>
     </>
   );
