@@ -105,8 +105,8 @@ function Contact() {
           <div className="contact__note">
             <strong>¿Necesitas atención más directa?</strong>
             <p>
-              En el siguiente commit agregaremos un acceso rápido mediante
-              WhatsApp.
+              Utiliza el botón de WhatsApp para iniciar una conversación con
+              nuestro equipo.
             </p>
           </div>
         </div>
