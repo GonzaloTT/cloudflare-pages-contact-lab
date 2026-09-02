@@ -90,10 +90,9 @@
   list-style: none;
 }
 
-.hero__benefits li {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
+.hero__benefits {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
 }
 
 .hero__check {

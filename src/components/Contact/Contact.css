@@ -195,6 +195,23 @@
   box-shadow: 0 0 0 4px rgb(22 117 138 / 12%);
 }
 
+.form-field input:user-invalid,
+.form-field select:user-invalid,
+.form-field textarea:user-invalid {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 4px rgb(185 28 28 / 8%);
+}
+
+.contact-form__consent input:user-invalid {
+  outline: 2px solid var(--color-error);
+  outline-offset: 2px;
+}
+
+.contact__details strong,
+.contact__details a {
+  overflow-wrap: anywhere;
+}
+
 .contact-form__consent {
   display: flex;
   align-items: flex-start;

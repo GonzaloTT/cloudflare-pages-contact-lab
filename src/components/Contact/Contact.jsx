@@ -114,10 +114,13 @@ function Contact() {
         <div className="contact__form-container">
           <div className="contact__form-heading">
             <h3>Cuéntanos sobre tu propiedad</h3>
-            <p>Los campos marcados con * son obligatorios.</p>
+
+            <p id="contact-form-help">
+              Los campos marcados con * son obligatorios.
+            </p>
           </div>
 
-          <form className="contact-form" onSubmit={handleSubmit}>
+          <form className="contact-form" aria-describedby="contact-form-help" onSubmit={handleSubmit}>
             <div className="contact-form__grid">
               <div className="form-field">
                 <label htmlFor="name">Nombre completo *</label>
@@ -209,10 +212,14 @@ function Contact() {
             </button>
 
             {formMessage && (
-              <p className="contact-form__status" role="status">
+              <p
+                className="contact-form__status"
+                role="status"
+                aria-live="polite"
+              >
                 {formMessage}
               </p>
-            )}
+            )}            
           </form>
         </div>
       </div>

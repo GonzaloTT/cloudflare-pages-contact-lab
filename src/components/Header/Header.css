@@ -93,6 +93,9 @@
     opacity var(--transition-base),
     transform var(--transition-base);
   pointer-events: none;
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .header__nav--open {
@@ -155,6 +158,8 @@
     opacity: 1;
     transform: none;
     pointer-events: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   .header__nav-list {

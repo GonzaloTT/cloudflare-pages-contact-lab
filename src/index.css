@@ -190,6 +190,30 @@ select:focus-visible {
   outline-offset: 3px;
 }
 
+section[id] {
+  scroll-margin-top: 5rem;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: var(--space-3);
+  left: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  background-color: var(--color-primary-900);
+  box-shadow: var(--shadow-md);
+  color: var(--color-neutral-0);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  transform: translateY(-200%);
+  transition: transform var(--transition-fast);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
 /* Reusable layout utilities */
 
 .container {

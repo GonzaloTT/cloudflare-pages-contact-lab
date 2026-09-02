@@ -32,6 +32,22 @@ function Header() {
     };
   }, [isMenuOpen]);
 
+  useEffect(() => {
+    const desktopMediaQuery = window.matchMedia('(min-width: 64rem)');
+
+    const handleViewportChange = (event) => {
+      if (event.matches) {
+        closeMenu();
+      }
+    };
+
+    desktopMediaQuery.addEventListener('change', handleViewportChange);
+
+    return () => {
+      desktopMediaQuery.removeEventListener('change', handleViewportChange);
+  } ;
+  }, []); 
+
   return (
     <header className="header">
       <div className="container header__inner">
