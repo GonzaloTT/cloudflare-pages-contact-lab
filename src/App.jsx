@@ -1,4 +1,5 @@
 import Header from './components/Header/Header';
+import Hero from './components/Hero/Hero';
 
 function App() {
   return (
@@ -6,8 +7,7 @@ function App() {
       <Header />
 
       <main id="inicio">
-        <h1>FlowGuard</h1>
-        <p>Soluciones profesionales para proteger tu propiedad.</p>
+        <Hero />
       </main>
     </>
   );
