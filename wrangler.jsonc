@@ -1,11 +1,17 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cloudflare-pages-contact-lab",
+  "main": "./worker/index.js",
   "compatibility_date": "2026-09-02",
   "workers_dev": true,
   "preview_urls": true,
+  "keep_vars": true,
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*"
+    ]
   }
 }
