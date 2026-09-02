@@ -44,15 +44,78 @@ function ContactIcon({ type }) {
 }
 
 function Contact() {
-  const [formMessage, setFormMessage] = useState('');
+  const [formStatus, setFormStatus] = useState({
+  type: 'idle',
+  message: '',
+});
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
+const [fieldErrors, setFieldErrors] = useState({});
+const [isSubmitting, setIsSubmitting] = useState(false);
 
-    setFormMessage(
-      'Formulario validado correctamente. El envío por correo se conectará en el siguiente paso.',
-    );
+const handleSubmit = async (event) => {
+  event.preventDefault();
+
+  if (isSubmitting) {
+    return;
+  }
+
+  const form = event.currentTarget;
+  const formData = new FormData(form);
+
+  const contactData = {
+    name: formData.get('name'),
+    email: formData.get('email'),
+    phone: formData.get('phone'),
+    service: formData.get('service'),
+    message: formData.get('message'),
+    consent: formData.get('consent') === 'on',
+    website: formData.get('website') || '',
   };
+
+  setIsSubmitting(true);
+  setFieldErrors({});
+  setFormStatus({
+    type: 'idle',
+    message: '',
+  });
+
+  try {
+    const response = await fetch('/api/contact', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(contactData),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setFieldErrors(result.errors || {});
+
+      throw new Error(
+        result.message || 'No fue posible procesar la solicitud.',
+      );
+    }
+
+    form.reset();
+
+    setFormStatus({
+      type: 'success',
+      message: result.message,
+    });
+  } catch (error) {
+    setFormStatus({
+      type: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Ocurrió un error inesperado.',
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <section className="contact section" id="contacto">
@@ -121,6 +184,19 @@ function Contact() {
           </div>
 
           <form className="contact-form" aria-describedby="contact-form-help" onSubmit={handleSubmit}>
+            <div className="contact-form__honeypot" aria-hidden="true">
+              <label htmlFor="website">
+                Sitio web
+              </label>
+
+              <input
+                id="website"
+                name="website"
+                type="text"
+                tabIndex="-1"
+                autoComplete="off"
+              />
+            </div>            
             <div className="contact-form__grid">
               <div className="form-field">
                 <label htmlFor="name">Nombre completo *</label>
@@ -207,19 +283,32 @@ function Contact() {
               </span>
             </label>
 
-            <button className="button button--primary contact-form__submit" type="submit">
-              Enviar solicitud
+            <button
+              className="button button--primary contact-form__submit"
+              type="submit"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+            >
+              {isSubmitting ? 'Enviando…' : 'Enviar solicitud'}
             </button>
 
-            {formMessage && (
+            {Object.keys(fieldErrors).length > 0 && (
+              <ul className="contact-form__errors" aria-label="Errores del formulario">
+                {Object.values(fieldErrors).map((error) => (
+                  <li key={error}>{error}</li>
+                ))}
+              </ul>
+            )}
+
+            {formStatus.message && (
               <p
-                className="contact-form__status"
-                role="status"
-                aria-live="polite"
+                className={`contact-form__status contact-form__status--${formStatus.type}`}
+                role={formStatus.type === 'error' ? 'alert' : 'status'}
+                aria-live={formStatus.type === 'error' ? 'assertive' : 'polite'}
               >
-                {formMessage}
+                {formStatus.message}
               </p>
-            )}            
+            )}           
           </form>
         </div>
       </div>
