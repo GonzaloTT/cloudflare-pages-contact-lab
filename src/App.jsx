@@ -1,9 +1,15 @@
+import Header from './components/Header/Header';
+
 function App() {
   return (
-    <main>
-      <h1>FlowGuard</h1>
-      <p>Soluciones profesionales para proteger tu propiedad.</p>
-    </main>
+    <>
+      <Header />
+
+      <main id="inicio">
+        <h1>FlowGuard</h1>
+        <p>Soluciones profesionales para proteger tu propiedad.</p>
+      </main>
+    </>
   );
 }
 
