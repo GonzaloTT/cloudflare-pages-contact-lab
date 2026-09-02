@@ -2,6 +2,7 @@ import Header from './components/Header/Header';
 import Hero from './components/Hero/Hero';
 import Services from './components/Services/Services';
 import Process from './components/Process/Process';
+import Benefits from './components/Benefits/Benefits';
 
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
         <Hero />
         <Services />
         <Process />
+        <Benefits />
       </main>
     </>
   );
