@@ -7,6 +7,10 @@ const allowedServices = new Set([
 ]);
 
 const maxBodySize = 12_000;
+const maxTurnstileTokenLength = 2_048;
+const turnstileVerificationUrl =
+  'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+const turnstileTimeoutMilliseconds = 5_000;
 
 function jsonResponse(payload, status = 200, additionalHeaders = {}) {
   return new Response(JSON.stringify(payload), {
@@ -71,6 +75,139 @@ function validateContactData(body) {
     },
     errors,
   };
+}
+
+function getAllowedTurnstileHostnames(value) {
+  return normalizeText(value)
+    .split(',')
+    .map((hostname) => hostname.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function isAllowedTurnstileHostname(hostname, allowedHostnames) {
+  const normalizedHostname = normalizeText(hostname).toLowerCase();
+
+  return allowedHostnames.some(
+    (allowedHostname) =>
+      normalizedHostname === allowedHostname ||
+      normalizedHostname.endsWith(`.${allowedHostname}`),
+  );
+}
+
+async function verifyTurnstileToken(token, request, env, requestId) {
+  const normalizedToken = normalizeText(token);
+
+  if (
+    !normalizedToken ||
+    normalizedToken.length > maxTurnstileTokenLength
+  ) {
+    return {
+      success: false,
+      unavailable: false,
+    };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    turnstileTimeoutMilliseconds,
+  );
+
+  try {
+    const remoteIp = request.headers.get('CF-Connecting-IP');
+    const payload = {
+      secret: env.TURNSTILE_SECRET_KEY,
+      response: normalizedToken,
+      idempotency_key: requestId,
+    };
+
+    if (remoteIp) {
+      payload.remoteip = remoteIp;
+    }
+
+    const response = await fetch(turnstileVerificationUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok || !result) {
+      throw new Error(
+        `Turnstile responded with status ${response.status}.`,
+      );
+    }
+
+    if (!result.success) {
+      console.warn('Turnstile rejected a contact request.', {
+        requestId,
+        errorCodes: result['error-codes'] || [],
+      });
+
+      return {
+        success: false,
+        unavailable: false,
+      };
+    }
+
+    const expectedAction = normalizeText(env.TURNSTILE_EXPECTED_ACTION);
+
+    if (expectedAction && result.action !== expectedAction) {
+      console.warn('Turnstile returned an unexpected action.', {
+        requestId,
+        receivedAction: result.action || '',
+      });
+
+      return {
+        success: false,
+        unavailable: false,
+      };
+    }
+
+    const allowedHostnames = getAllowedTurnstileHostnames(
+      env.TURNSTILE_ALLOWED_HOSTNAMES,
+    );
+
+    if (
+        allowedHostnames.length > 0 &&
+        !isAllowedTurnstileHostname(result.hostname, allowedHostnames)
+    ) {
+      console.warn('Turnstile returned an unauthorized hostname.', {
+        requestId,
+        receivedHostname: result.hostname || '',
+      });
+
+      return {
+        success: false,
+        unavailable: false,
+      };
+    }
+
+    return {
+      success: true,
+      unavailable: false,
+    };
+  } catch (error) {
+    console.error('Turnstile verification failed.', {
+      requestId,
+      reason:
+        error instanceof Error
+          ? error.message
+          : 'Unknown Turnstile verification error.',
+    });
+
+    return {
+      success: false,
+      unavailable: true,
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 function escapeHtml(value) {
@@ -354,6 +491,16 @@ async function handleContactRequest(request, env) {
     );
   }
 
+    if (!env.TURNSTILE_SECRET_KEY) {
+    return jsonResponse(
+      {
+        success: false,
+        message: 'El servicio de verificación no está configurado.',
+      },
+      500,
+    );
+  }
+
   if (
     !env.RESEND_API_KEY ||
     !env.CONTACT_TO_EMAIL ||
@@ -369,6 +516,39 @@ async function handleContactRequest(request, env) {
   }
 
   const requestId = crypto.randomUUID();
+  const turnstileVerification = await verifyTurnstileToken(
+    body.turnstileToken,
+    request,
+    env,
+    requestId,
+  );
+
+  if (!turnstileVerification.success) {
+    if (turnstileVerification.unavailable) {
+      return jsonResponse(
+        {
+          success: false,
+          requestId,
+          message:
+            'La verificación de seguridad no está disponible. Inténtalo nuevamente.',
+        },
+        502,
+      );
+    }
+
+    return jsonResponse(
+      {
+        success: false,
+        requestId,
+        message:
+          'No fue posible validar la verificación de seguridad. Inténtalo nuevamente.',
+        errors: {
+          turnstile: 'Completa nuevamente la verificación de seguridad.',
+        },
+      },
+      403,
+    );
+  }
 
   try {
     await sendContactEmail(data, env, requestId);

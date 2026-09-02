@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import TurnstileWidget from './TurnstileWidget';
 import './Contact.css';
 
 const serviceOptions = [
@@ -8,6 +9,8 @@ const serviceOptions = [
   'Inspección y reparación',
   'No estoy seguro',
 ];
+
+const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 function ContactIcon({ type }) {
   const paths = {
@@ -45,77 +48,112 @@ function ContactIcon({ type }) {
 
 function Contact() {
   const [formStatus, setFormStatus] = useState({
-  type: 'idle',
-  message: '',
-});
-
-const [fieldErrors, setFieldErrors] = useState({});
-const [isSubmitting, setIsSubmitting] = useState(false);
-
-const handleSubmit = async (event) => {
-  event.preventDefault();
-
-  if (isSubmitting) {
-    return;
-  }
-
-  const form = event.currentTarget;
-  const formData = new FormData(form);
-
-  const contactData = {
-    name: formData.get('name'),
-    email: formData.get('email'),
-    phone: formData.get('phone'),
-    service: formData.get('service'),
-    message: formData.get('message'),
-    consent: formData.get('consent') === 'on',
-    website: formData.get('website') || '',
-  };
-
-  setIsSubmitting(true);
-  setFieldErrors({});
-  setFormStatus({
     type: 'idle',
     message: '',
   });
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileMessage, setTurnstileMessage] = useState('');
+  const turnstileRef = useRef(null);
 
-  try {
-    const response = await fetch('/api/contact', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(contactData),
-    });
+  const handleTurnstileVerify = useCallback((token) => {
+    setTurnstileToken(token);
+    setTurnstileMessage('');
+  }, []);
 
-    const result = await response.json();
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken('');
+    setTurnstileMessage(
+      'La verificación expiró. Complétala nuevamente para continuar.',
+    );
+  }, []);
 
-    if (!response.ok) {
-      setFieldErrors(result.errors || {});
+  const handleTurnstileError = useCallback(() => {
+    setTurnstileToken('');
+    setTurnstileMessage(
+      'No fue posible completar la verificación. Inténtalo nuevamente.',
+    );
+  }, []);
 
-      throw new Error(
-        result.message || 'No fue posible procesar la solicitud.',
-      );
+  const resetTurnstile = () => {
+    setTurnstileToken('');
+    turnstileRef.current?.reset();
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (isSubmitting) {
+      return;
     }
 
-    form.reset();
+    if (!turnstileToken) {
+      setTurnstileMessage(
+        'Completa la verificación de seguridad antes de enviar.',
+      );
+      return;
+    }
 
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    const contactData = {
+      name: formData.get('name'),
+      email: formData.get('email'),
+      phone: formData.get('phone'),
+      service: formData.get('service'),
+      message: formData.get('message'),
+      consent: formData.get('consent') === 'on',
+      website: formData.get('website') || '',
+      turnstileToken,
+    };
+
+    setIsSubmitting(true);
+    setFieldErrors({});
     setFormStatus({
-      type: 'success',
-      message: result.message,
+      type: 'idle',
+      message: '',
     });
-  } catch (error) {
-    setFormStatus({
-      type: 'error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Ocurrió un error inesperado.',
-    });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contactData),
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setFieldErrors(result.errors || {});
+
+        throw new Error(
+          result.message || 'No fue posible procesar la solicitud.',
+        );
+      }
+
+      form.reset();
+
+      setFormStatus({
+        type: 'success',
+        message: result.message,
+      });
+    } catch (error) {
+      setFormStatus({
+        type: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Ocurrió un error inesperado.',
+      });
+    } finally {
+      resetTurnstile();
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <section className="contact section" id="contacto">
@@ -183,11 +221,13 @@ const handleSubmit = async (event) => {
             </p>
           </div>
 
-          <form className="contact-form" aria-describedby="contact-form-help" onSubmit={handleSubmit}>
+          <form
+            className="contact-form"
+            aria-describedby="contact-form-help"
+            onSubmit={handleSubmit}
+          >
             <div className="contact-form__honeypot" aria-hidden="true">
-              <label htmlFor="website">
-                Sitio web
-              </label>
+              <label htmlFor="website">Sitio web</label>
 
               <input
                 id="website"
@@ -196,7 +236,8 @@ const handleSubmit = async (event) => {
                 tabIndex="-1"
                 autoComplete="off"
               />
-            </div>            
+            </div>
+
             <div className="contact-form__grid">
               <div className="form-field">
                 <label htmlFor="name">Nombre completo *</label>
@@ -283,17 +324,44 @@ const handleSubmit = async (event) => {
               </span>
             </label>
 
+            {turnstileSiteKey ? (
+              <div className="contact-form__turnstile">
+                <TurnstileWidget
+                  ref={turnstileRef}
+                  siteKey={turnstileSiteKey}
+                  onVerify={handleTurnstileVerify}
+                  onExpire={handleTurnstileExpire}
+                  onError={handleTurnstileError}
+                />
+              </div>
+            ) : (
+              <p className="contact-form__turnstile-error" role="alert">
+                La verificación de seguridad no está configurada.
+              </p>
+            )}
+
+            {turnstileMessage && (
+              <p className="contact-form__turnstile-error" role="alert">
+                {turnstileMessage}
+              </p>
+            )}
+
             <button
               className="button button--primary contact-form__submit"
               type="submit"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting || !turnstileToken || !turnstileSiteKey
+              }
               aria-busy={isSubmitting}
             >
               {isSubmitting ? 'Enviando…' : 'Enviar solicitud'}
             </button>
 
             {Object.keys(fieldErrors).length > 0 && (
-              <ul className="contact-form__errors" aria-label="Errores del formulario">
+              <ul
+                className="contact-form__errors"
+                aria-label="Errores del formulario"
+              >
                 {Object.values(fieldErrors).map((error) => (
                   <li key={error}>{error}</li>
                 ))}
@@ -304,11 +372,13 @@ const handleSubmit = async (event) => {
               <p
                 className={`contact-form__status contact-form__status--${formStatus.type}`}
                 role={formStatus.type === 'error' ? 'alert' : 'status'}
-                aria-live={formStatus.type === 'error' ? 'assertive' : 'polite'}
+                aria-live={
+                  formStatus.type === 'error' ? 'assertive' : 'polite'
+                }
               >
                 {formStatus.message}
               </p>
-            )}           
+            )}
           </form>
         </div>
       </div>

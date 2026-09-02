@@ -1,3 +1,6 @@
-RESEND_API_KEY=re_your_api_key
-CONTACT_TO_EMAIL=your-email@example.com
-CONTACT_FROM_EMAIL=FlowGuard <onboarding@resend.dev>
+RESEND_API_KEY="re_your_api_key"
+CONTACT_TO_EMAIL="your-email@example.com"
+CONTACT_FROM_EMAIL="FlowGuard <onboarding@resend.dev>"
+TURNSTILE_SECRET_KEY="1x0000000000000000000000000000000AA"
+TURNSTILE_ALLOWED_HOSTNAMES="localhost,127.0.0.1"
+TURNSTILE_EXPECTED_ACTION="test"

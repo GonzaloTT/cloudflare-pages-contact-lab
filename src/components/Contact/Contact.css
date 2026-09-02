@@ -283,6 +283,26 @@
   font-size: var(--font-size-sm);
 }
 
+/* Agrega este bloque a Contact.css, antes de los @media. */
+
+.contact-form__turnstile {
+  width: 100%;
+  min-height: 4.1rem;
+  margin-bottom: var(--space-4);
+}
+
+.contact-form__turnstile > div,
+.contact-form__turnstile iframe {
+  max-width: 100%;
+}
+
+.contact-form__turnstile-error {
+  margin: calc(var(--space-2) * -1) 0 var(--space-4);
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
 @media (min-width: 40rem) {
   .contact-form__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
