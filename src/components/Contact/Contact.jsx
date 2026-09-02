@@ -10,7 +10,7 @@ const serviceOptions = [
   'No estoy seguro',
 ];
 
-const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAAEkgs1DYkM9lbB9h';
 
 function ContactIcon({ type }) {
   const paths = {
